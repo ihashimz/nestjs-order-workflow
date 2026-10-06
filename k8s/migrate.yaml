@@ -1,0 +1,41 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: order-migrate
+  namespace: order-workflow
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels: { app: order-migrate }
+    spec:
+      restartPolicy: OnFailure
+      serviceAccountName: order-app
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: migrate
+          image: ghcr.io/ihashimz/nestjs-order-workflow:latest
+          command:
+            [
+              node,
+              node_modules/typeorm/cli.js,
+              migration:run,
+              -d,
+              dist/database/data-source.js,
+            ]
+          envFrom:
+            - configMapRef: { name: order-config }
+            - secretRef: { name: order-secrets }
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: "1", memory: 512Mi }

@@ -1,0 +1,66 @@
+{
+  "name": "nestjs-order-workflow",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Transactional inventory reservations and durable order expiry in NestJS",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.22.3 <23"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --runInBand",
+    "start": "node --env-file-if-exists=.env dist/main.js",
+    "worker": "node --env-file-if-exists=.env dist/worker.js",
+    "migration:run": "node --env-file-if-exists=.env node_modules/typeorm/cli-ts-node-commonjs.js migration:run -d src/database/data-source.ts",
+    "seed": "node --env-file-if-exists=.env -r ts-node/register src/database/seed.ts",
+    "test:postgres": "jest --runInBand test/postgres.spec.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.0",
+    "@nestjs/core": "^11.1.0",
+    "@nestjs/jwt": "^11.0.0",
+    "@nestjs/passport": "^11.0.5",
+    "@nestjs/platform-express": "^11.1.0",
+    "@nestjs/swagger": "11.4.7",
+    "@nestjs/throttler": "^6.7.1",
+    "@nestjs/typeorm": "^11.0.0",
+    "bullmq": "^5.61.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.2",
+    "helmet": "^8.1.0",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "pg": "^8.16.0",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "typeorm": "^0.3.27"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.18.0",
+    "@types/passport-jwt": "^4.0.1",
+    "jest": "^29.7.0",
+    "prettier": "^3.9.9",
+    "ts-jest": "^29.4.0",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.9.2"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/test/**/*.spec.ts"
+    ],
+    "watchman": false
+  },
+  "overrides": {
+    "@nestjs/swagger": {
+      "js-yaml": "5.4.3"
+    }
+  }
+}

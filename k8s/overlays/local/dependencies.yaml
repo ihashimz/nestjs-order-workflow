@@ -1,0 +1,126 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-postgres
+spec:
+  selector: { app: order-postgres }
+  ports: [{ port: 5432, targetPort: 5432 }]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: order-postgres
+spec:
+  serviceName: order-postgres
+  replicas: 1
+  selector: { matchLabels: { app: order-postgres } }
+  template:
+    metadata:
+      labels: { app: order-postgres }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: postgres
+          image: postgres:16-bookworm
+          env:
+            - { name: POSTGRES_USER, value: orders }
+            - { name: POSTGRES_DB, value: orders }
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: order-postgres-secret, key: password }
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+          ports: [{ containerPort: 5432 }]
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: "1", memory: 512Mi }
+          readinessProbe:
+            tcpSocket: { port: 5432 }
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket: { port: 5432 }
+            periodSeconds: 15
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql/data }
+            - { name: tmp, mountPath: /tmp }
+            - { name: run, mountPath: /var/run/postgresql }
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+        - name: run
+          emptyDir: { sizeLimit: 16Mi }
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests: { storage: 1Gi }
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-redis
+spec:
+  selector: { app: order-redis }
+  ports: [{ port: 6379, targetPort: 6379 }]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: order-redis
+spec:
+  serviceName: order-redis
+  replicas: 1
+  selector: { matchLabels: { app: order-redis } }
+  template:
+    metadata:
+      labels: { app: order-redis }
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: redis
+          image: redis:7-bookworm
+          command:
+            [redis-server, --appendonly, "yes", --maxmemory-policy, noeviction]
+          ports: [{ containerPort: 6379 }]
+          securityContext:
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities: { drop: [ALL] }
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: "1", memory: 512Mi }
+          readinessProbe:
+            tcpSocket: { port: 6379 }
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket: { port: 6379 }
+            periodSeconds: 15
+          volumeMounts:
+            - { name: data, mountPath: /data }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: tmp
+          emptyDir: { sizeLimit: 64Mi }
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests: { storage: 1Gi }
