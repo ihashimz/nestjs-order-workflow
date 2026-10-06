@@ -151,7 +151,7 @@ kubectl -n order-workflow rollout status deployment/order-api
 kubectl -n order-workflow port-forward service/order-api 3000:3000
 ```
 
-Readiness fails until the inventory schema exists; migrations run through a separate Job rather than in every API replica. Apply one migration Job per release; remove a finished Job before reusing its name. Set the image digest consistently in both Deployments and the migration Job before deploying a real release. The source defaults to `latest` for demonstration; The CI template publishes immutable commit-SHA tags when activated. A public source repository does not guarantee public GHCR package visibility: make the package public for anonymous pulls or configure an `imagePullSecret` on the pod service account.
+Readiness fails until the inventory schema exists; migrations run through a separate Job rather than in every API replica. Apply one migration Job per release; remove a finished Job before reusing its name. Set the image digest consistently in both Deployments and the migration Job before deploying a real release. The source defaults to `latest` for demonstration; Use immutable commit-SHA image tags or image digests for releases. A public source repository does not guarantee public GHCR package visibility: make the package public for anonymous pulls or configure an `imagePullSecret` on the pod service account.
 
 The ingress allow rule expects an `ingress-nginx` namespace. Customize it for your ingress controller and terminate HTTPS there. Managed external databases need corresponding egress policy and TLS configuration; the base policies intentionally select local dependency pods. The worker's HTTP port is for kubelet probes, with no public Service. PDBs preserve one replica during voluntary disruptions; they do not protect against node failure. CPU HPA is optional:
 
@@ -176,7 +176,7 @@ kubectl kustomize k8s/overlays/local
 
 The default suite has 21 passing unit/security tests covering canonical payload hashes, duplicate SKU validation, authorization, overselling through a transaction boundary double, duplicate reservations/releases, database-clock deadline/state behavior, salted passwords, strict DTOs, bounded password derivation, login guard rate limiting, and durable outbox retry behavior. The transaction double models exclusion and rollback; it does not validate PostgreSQL's implementation of row locks.
 
-Six additional integration tests use actual PostgreSQL transactions for concurrent overselling, same-key races, multi-line rollback, confirmation/cancellation and expiry/cancellation races, and owner-scoped queries. They are skipped locally unless `TEST_DATABASE_URL` points to a **dedicated test database**. Each run creates and drops an isolated temporary schema. The supplied CI template provisions PostgreSQL and runs them when activated.
+Six additional integration tests use actual PostgreSQL transactions for concurrent overselling, same-key races, multi-line rollback, confirmation/cancellation and expiry/cancellation races, and owner-scoped queries. They are skipped locally unless `TEST_DATABASE_URL` points to a **dedicated test database**. Each run creates and drops an isolated temporary schema. Run these tests against a dedicated PostgreSQL test database using the command below.
 
 ```sh
 TEST_DATABASE_URL='postgresql://USER:PASSWORD@localhost:5432/DEDICATED_TEST_DB' npm run test:postgres
@@ -184,14 +184,10 @@ TEST_DATABASE_URL='postgresql://USER:PASSWORD@localhost:5432/DEDICATED_TEST_DB' 
 
 The compatible Swagger 11.4.7 dependency pins YAML 5.4.0; a scoped npm override selects the patched YAML 5.4.3 release. Revisit this override when Swagger updates its dependency.
 
-Locally verified: TypeScript build/typecheck, unit/security tests, formatting, production dependency audit and Kustomize rendering. Not locally exercised: live PostgreSQL/Redis end-to-end traffic, Docker image startup, a Kubernetes cluster, HPA behavior or cloud operations. Rendering validates Kustomize assembly, not cluster admission or runtime policy enforcement. CI configuration is supplied as a template; GitHub Actions is not currently enabled for this repository.
+Locally verified: TypeScript build/typecheck, unit/security tests, formatting, production dependency audit and Kustomize rendering. Not locally exercised: live PostgreSQL/Redis end-to-end traffic, Docker image startup, a Kubernetes cluster, HPA behavior or cloud operations. Rendering validates Kustomize assembly, not cluster admission or runtime policy enforcement. Verification is local; no remote build pipeline was exercised.
 
 ## Operational boundaries
 
 This example intentionally omits payments, inventory restocking, shipping, refresh tokens, public registration, distributed tracing and a metrics backend. Inventory represents available units rather than a complete accounting ledger. Orders retain item snapshots without pricing. A production rollout should configure HTTPS, shared login throttling across replicas, managed backups, secret rotation, DB/Redis authentication and TLS, and alerts for old pending outbox events and repeated failures. These are deployment requirements, not claims already verified here.
 
 See [the design contract](docs/design.md) and the [Nest documentation](https://docs.nestjs.com/), [PostgreSQL locking documentation](https://www.postgresql.org/docs/current/explicit-locking.html), and [BullMQ job ID guidance](https://docs.bullmq.io/guide/jobs/job-ids) for the underlying mechanisms.
-
-## Activating CI
-
-The complete workflow template is [docs/ci/verify-and-publish.yaml](docs/ci/verify-and-publish.yaml). It is intentionally outside `.github/workflows`: the GitHub OAuth credential used for publication does not have the `workflow` permission. With an appropriately authorized credential, copy the template to `.github/workflows/ci.yaml` and commit it to enable verification and image publication. No Actions or image-publishing success is claimed before activation.
