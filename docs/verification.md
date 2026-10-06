@@ -17,3 +17,5 @@ Verified on 2026-10-06 with Node 22.22.3, npm 10.9.8 and kubectl 1.33.9 / Kustom
 The initial order test cycle observed 11 failing invariant tests against deliberately incomplete stubs, then passed after implementation. Password/DTO validation and durable outbox tests also failed before implementation. Additional database-clock and rate-limiter/password-boundary tests observed their intended failures before fixes.
 
 The PostgreSQL suite is configured in CI with an isolated test schema and a PostgreSQL service. It was not run locally: no live PostgreSQL/Redis setup, Docker startup or Kubernetes cluster was requested. No live queue retries, cluster admissions, network policy enforcement, HPA behavior, load performance or cloud deployment were verified. Check CI results after publication before reporting the integration suite as passing.
+
+Publication note: GitHub Actions configuration is retained under docs/ci as a template. It is not active; the publishing credential lacks workflow permission.
